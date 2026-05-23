@@ -1,0 +1,11 @@
+# Environments
+venv/
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Local Data/Databases
+scan_data/
+login_app/users.db

@@ -92,6 +92,36 @@ Because this bot utilizes underlying operating system commands for comprehensive
 
 ---
 
+## ⚡ Concurrency & Performance Metrics
+
+### 1. Sequential Scanning Duration (Without Concurrency)
+If you execute all 8 scanning modules one after another sequentially, the total scan time is the sum of each tool's run:
+
+*   **Initial Identification (`initial_logic.py`)**: ~10–15 seconds *(WHOIS, GeoIP, Shodan API)*
+*   **Subdomain Scan (`subdomain_logic.py`)**: ~15–30 seconds *(crt.sh query + active DNS lookups)*
+*   **Web Hub Scan (`webhub_logic.py`)**: ~15–20 seconds *(Wappalyzer fingerprinter + Wayback Machine)*
+*   **Search Engine Intelligence (`search_logic.py`)**: ~10–15 seconds *(Google Dorking + robots.txt/sitemap check)*
+*   **Email Scanner (`email_logic.py`)**: ~10–20 seconds *(OSINT scraping for contact details)*
+*   **Network Scan (`network_logic.py`)**: ~2–3 minutes (120–180s) *(Nmap TCP service scan `-sV -T4` + `nvdlib` CVE lookup API)*
+*   **UDP Port Scan (`udp_logic.py`)**: ~10–15 minutes (600–900s) *(Exhaustive Nmap UDP scan `-sU` across 65,535 ports)*
+*   **Website Analysis (`webanalysis_logic.py`)**: ~5–15 minutes (300–900s) *(Nikto Perl script auditing web directories for 6,700+ vulnerability patterns)*
+
+**Total Sequential Time:** $\approx 15\text{s} + 30\text{s} + 20\text{s} + 15\text{s} + 20\text{s} + 180\text{s} + 900\text{s} + 900\text{s} \approx 2080\text{s} \approx \mathbf{30 - 35\text{ minutes}}$
+
+### 2. Asynchronous Scanning Duration (With Concurrency)
+Since the modules are heavily network-bound and process-bound (spawning separate command-line subprocesses like Nmap and Nikto), they can run in parallel without blocking the main dashboard execution.
+
+With an asynchronous engine, the total scan time is bounded by the single longest-running task (which is either the UDP scan or the Nikto web analysis scan running concurrently in the background).
+
+**Total Asynchronous Time:** $\approx \max(\text{all scans}) \approx \mathbf{10 - 15\text{ minutes}}$
+
+### 3. Summary of Time Saved
+*   **Time Saved per Target Scan:** **~15 to 20 minutes** (reducing latency from 35 minutes down to 15 minutes).
+*   **Percentage Improvement:** Over **55% to 60% time reduction** for full scans.
+*   **With Caching:** When combined with the 5-day caching layer (which loads past results instantly from JSON), subsequent scans return **instantly (under 1 second)**, saving **99.9%** of scan time.
+
+---
+
 ## 4. Flow of the Files
 
 The project is structured into Authentication, API Routing, and Modular Scanning Logic.
