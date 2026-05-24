@@ -1,7 +1,7 @@
 # Nikhal Tool Google Dorking
 
 import requests
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as defused_ET
 from urllib.parse import urljoin, quote_plus
 import socket
 import re
@@ -33,10 +33,10 @@ def check_sitemap(base):
         url = f"{base}/sitemap.xml"
         r = requests.get(url, timeout=5)
         if r.status_code == 200:
-            root = ET.fromstring(r.text)
+            root = defused_ET.fromstring(r.text)
             locations = [loc.text for loc in root.findall(".//{http://www.sitemaps.org/schemas/sitemap/0.9}loc")[:10]]
             return {"found": True, "entries": locations}
-    except (requests.RequestException, ET.ParseError):
+    except (requests.RequestException, defused_ET.ParseError):
         pass
     return {"found": False, "entries": []}
 

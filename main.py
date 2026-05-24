@@ -102,7 +102,7 @@ async def serve_dashboard(request: Request):
         response = RedirectResponse(url="/login", status_code=303)
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         return response
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 @router.get("/ping")
 async def check_ping_endpoint(target: str, _=Depends(require_login)):
@@ -187,6 +187,8 @@ async def master_scan(target: str, type: str, target_type: str = "website", _=De
                 "webanalysis": webanalysis_logic.run_webanalysis_scan
             }
             
+            # Check cache first for all scans, populate results for hits, and collect misses
+            uncached_scans = {}
             for sub_scan_type, run_func in scans_to_run.items():
                 print(f"[*] 'All' Scan: Checking cache for {sub_scan_type}...")
                 cached_sub = get_cached_scan_data(target, sub_scan_type)
@@ -194,8 +196,41 @@ async def master_scan(target: str, type: str, target_type: str = "website", _=De
                     print(f"[+] Loaded {sub_scan_type} from cache.")
                     results.update(cached_sub)
                 else:
-                    print(f"[-] No cache found. Executing {sub_scan_type} scan...")
-                    results.update(run_func(target))
+                    print(f"[-] No cache found. Queueing {sub_scan_type} scan...")
+                    uncached_scans[sub_scan_type] = run_func
+            
+            # Execute uncached scans in parallel using ThreadPoolExecutor
+            if uncached_scans:
+                from concurrent.futures import ThreadPoolExecutor, as_completed
+                
+                # We define a wrapper to handle exceptions within thread workers and cache individually
+                def execute_and_cache(sub_type, run_fn, tgt):
+                    try:
+                        print(f"[*] Starting {sub_type} scan in thread...")
+                        sub_results = run_fn(tgt)
+                        if sub_results and "error" not in sub_results:
+                            # Save sub-scan cache dynamically upon completion
+                            save_scan_data(tgt, sub_type, sub_results)
+                        return sub_type, sub_results
+                    except Exception as thread_err:
+                        print(f"[-] Thread error on {sub_type} scan: {thread_err}")
+                        return sub_type, {"error": f"Scan failed: {str(thread_err)}"}
+                
+                # Execute scans concurrently
+                with ThreadPoolExecutor(max_workers=len(uncached_scans)) as executor:
+                    futures = {
+                        executor.submit(execute_and_cache, sub_type, run_fn, target): sub_type 
+                        for sub_type, run_fn in uncached_scans.items()
+                    }
+                    for future in as_completed(futures):
+                        sub_type = futures[future]
+                        try:
+                            completed_sub_type, sub_results = future.result()
+                            results.update(sub_results)
+                            print(f"[+] Completed {completed_sub_type} scan and updated results.")
+                        except Exception as fut_err:
+                            print(f"[-] Failed retrieving future result for {sub_type}: {fut_err}")
+                            results.update({sub_type: {"error": f"Scan failed: {str(fut_err)} "}})
         else:
             return {"error": "Invalid scan type provided."}
     except Exception as e:

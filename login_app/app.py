@@ -127,14 +127,14 @@ def get_db_connection():
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("landing.html", {"request": request})
+    return templates.TemplateResponse(request, "landing.html")
 
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
     # Pass flash messages to template
     messages = request.session.pop("messages", [])
-    return templates.TemplateResponse("login.html", {"request": request, "messages": messages})
+    return templates.TemplateResponse(request, "login.html", {"messages": messages})
 
 
 @app.post("/login", response_class=HTMLResponse)
