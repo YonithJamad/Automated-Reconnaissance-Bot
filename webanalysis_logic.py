@@ -40,6 +40,8 @@ def run_webanalysis_scan(raw_target):
             errors="ignore"
         )
         output = result.stdout
+    except FileNotFoundError:
+        return {"error": "Perl is not installed or not in your system PATH. You must install Perl (e.g., Strawberry Perl) to run the Nikto Web Analysis."}
     except Exception as e:
         return {"error": str(e)}
 

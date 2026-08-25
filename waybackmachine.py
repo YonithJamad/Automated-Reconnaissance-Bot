@@ -20,17 +20,21 @@ def get_wayback_data(domain):
     cdx_url = f"https://web.archive.org/cdx/search/cdx?url=*.{clean_domain}/*&output=text&fl=original&collapse=urlkey"
 
     session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    })
+    
     retry_strategy = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=[502, 503, 504],
+        total=10,
+        backoff_factor=3,
+        status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET"]
     )
     session.mount("http://", HTTPAdapter(max_retries=retry_strategy))
     session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
 
     try:
-        response = session.get(cdx_url, timeout=60, verify=True)
+        response = session.get(cdx_url, timeout=300, verify=True)
         response.raise_for_status()
         
         all_urls = response.text.splitlines()

@@ -199,7 +199,13 @@ def run_network_scan(target):
         # Cast to int explicitly to prevent any argument injection via port values
         port_list = ",".join(str(int(p)) for p in open_ports)
         deep_scan_args = f"-p {port_list} -sT -sV -Pn --script vulners,ssl-cert -T4 --version-intensity 5 -n"
-        nm.scan(target, arguments=deep_scan_args)
+        nm.scan(host, arguments=deep_scan_args)
+
+        if host not in nm.all_hosts():
+            if len(nm.all_hosts()) > 0:
+                host = nm.all_hosts()[0]
+            else:
+                return {"error": "Host down or unreachable during deep scan"}
 
         host_data = nm[host]
         return {

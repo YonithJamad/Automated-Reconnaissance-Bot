@@ -1777,7 +1777,7 @@
                         if (activeEntries.length > 0) {
                             let html = `<div style="max-height: 200px; overflow-y: auto;">`;
                             activeEntries.slice(0, 200).forEach(([sub, ip]) => {
-                                html += `<div class="d-flex justify-content-between border-bottom py-1"><span>${sub}</span><span class="text-muted">${ip}</span></div>`;
+                                html += `<div class="d-flex justify-content-between border-bottom py-1"><a href="http://${sub}" target="_blank" class="text-decoration-none" style="color: var(--accent); font-weight: 500;">${sub}</a><span class="text-muted">${ip}</span></div>`;
                             });
                             if (activeEntries.length > 200) html += `<div class="text-muted mt-1">...and ${activeEntries.length - 200} more</div>`;
                             activeList.innerHTML = html + `</div>`;
@@ -1790,7 +1790,9 @@
                     if (historicalList) {
                         if (sdData.historical_domains && sdData.historical_domains.length > 0) {
                             let html = `<div style="max-height: 200px; overflow-y: auto;">`;
-                            sdData.historical_domains.slice(0, 200).forEach(h => html += `<div>${h}</div>`);
+                            sdData.historical_domains.slice(0, 200).forEach(h => {
+                                html += `<div><a href="http://${h}" target="_blank" class="text-decoration-none text-muted">${h}</a></div>`;
+                            });
                             if (sdData.historical_domains.length > 200) html += `<div class="text-muted mt-1">...and ${sdData.historical_domains.length - 200} more</div>`;
                             historicalList.innerHTML = html + `</div>`;
                         } else {
